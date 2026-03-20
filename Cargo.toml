@@ -1,0 +1,23 @@
+[package]
+name = "voro"
+version = "0.1.0"
+edition = "2021"
+description = "A fast, minimal CLI tool to save, organize, and run favorite commands"
+license = "MIT"
+
+[[bin]]
+name = "vo"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4.4.18", features = ["derive"] }
+ratatui = "0.26"
+crossterm = "0.27"
+rusqlite = { version = "0.30", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+dirs = "5.0"
+anyhow = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
+
+[dev-dependencies]
+tempfile = "3.10"
