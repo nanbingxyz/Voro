@@ -1,6 +1,6 @@
 # voro
 
-**Your commands, remembered.**
+**The Terminal Authority.**
 
 A fast, minimal CLI tool to save, organize, and run your favorite commands instantly.
 
@@ -30,13 +30,6 @@ Tired of:
 
 ```bash
 curl -sSL https://voro.sh/install | sh
-```
-
-### Homebrew
-
-```bash
-brew tap nanbingxyz/voro
-brew install voro
 ```
 
 ### Build from Source
