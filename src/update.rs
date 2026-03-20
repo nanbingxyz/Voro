@@ -134,12 +134,12 @@ impl Spinner {
 pub fn check_for_update() -> Result<Option<String>> {
     let spinner = Spinner::new("Checking for updates...");
 
-    let response = ureq::get(&format!("{}/{}", GITHUB_API_URL, GITHUB_REPO))
-        .query("per_page", "1")
+    let url = format!("{}/{}/releases/latest", GITHUB_API_URL, GITHUB_REPO);
+
+    let response = ureq::get(&url)
         .set("Accept", "application/vnd.github.v3+json")
         .set("User-Agent", "voro-update-checker")
-        .call()
-        .context("Failed to connect to GitHub API");
+        .call();
 
     match response {
         Ok(response) => {
@@ -165,6 +165,11 @@ pub fn check_for_update() -> Result<Option<String>> {
             }
         }
         Err(e) => {
+            let error_msg = e.to_string();
+            if error_msg.contains("404") {
+                spinner.fail("No releases found. Please create a release first.");
+                bail!("No releases found at {}", GITHUB_REPO);
+            }
             spinner.fail(&format!("Failed to check for updates: {}", e));
             bail!("Failed to check for updates: {}", e)
         }
