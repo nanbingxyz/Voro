@@ -131,6 +131,9 @@ pub enum Commands {
         #[arg(short, long, default_value = "20")]
         limit: usize,
     },
+
+    /// Update voro to the latest version
+    Update,
 }
 
 #[cfg(test)]

@@ -3,6 +3,7 @@ mod command;
 mod db;
 mod model;
 mod tui;
+mod update;
 mod utils;
 
 use anyhow::{bail, Result};
@@ -336,6 +337,10 @@ fn handle_command(cmd: Commands, db: &Database) -> Result<()> {
                 let time = entry.created_at.as_deref().unwrap_or("-");
                 println!("{:5} {:15} {:8} {:12} {}", entry.id.unwrap_or(0), entry.command_name, entry.exit_code, duration, time);
             }
+        }
+
+        Commands::Update => {
+            update::run_update()?;
         }
     }
 
