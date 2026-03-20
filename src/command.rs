@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::collections::HashSet;
 use std::io::{self, Write};
 use std::process::Command as ProcessCommand;
 use std::time::Instant;
@@ -8,6 +9,15 @@ use crate::model::{Command, History};
 
 /// Execute a saved command with optional arguments
 pub fn execute_command(cmd: &Command, args: &[String], db: &Database) -> Result<i32> {
+    // Extract template parameters and prompt for values
+    let command_with_params = if has_template_params(&cmd.command) {
+        let params = extract_template_params(&cmd.command);
+        let values = prompt_for_params(&params)?;
+        replace_template_params(&cmd.command, &values)
+    } else {
+        cmd.command.clone()
+    };
+
     // Check if confirmation is required
     if cmd.confirm {
         if !confirm_dangerous()? {
@@ -17,7 +27,7 @@ pub fn execute_command(cmd: &Command, args: &[String], db: &Database) -> Result<
     }
 
     // Build the full command string
-    let full_command = build_full_command(&cmd.command, args, cmd.passthrough);
+    let full_command = build_full_command(&command_with_params, args, cmd.passthrough);
 
     // Record start time
     let start = Instant::now();
@@ -91,6 +101,73 @@ fn confirm_dangerous() -> Result<bool> {
     Ok(input == "y" || input == "yes")
 }
 
+/// Check if command contains template parameters
+fn has_template_params(command: &str) -> bool {
+    command.contains('{') && command.contains('}')
+}
+
+/// Extract template parameters from command string
+/// Returns unique parameter names in order of first appearance
+fn extract_template_params(command: &str) -> Vec<String> {
+    let mut params = Vec::new();
+    let mut seen = HashSet::new();
+    let mut in_brace = false;
+    let mut current_param = String::new();
+
+    for ch in command.chars() {
+        match ch {
+            '{' => {
+                in_brace = true;
+                current_param.clear();
+            }
+            '}' if in_brace => {
+                in_brace = false;
+                let param = current_param.trim().to_string();
+                if !param.is_empty() && !seen.contains(&param) {
+                    seen.insert(param.clone());
+                    params.push(param);
+                }
+            }
+            _ if in_brace => {
+                current_param.push(ch);
+            }
+            _ => {}
+        }
+    }
+
+    params
+}
+
+/// Prompt user for each template parameter value
+fn prompt_for_params(params: &[String]) -> Result<Vec<(String, String)>> {
+    let mut values = Vec::new();
+
+    for param in params {
+        print!("Enter value for '{}': ", param);
+        io::stdout().flush()?;
+
+        let mut input = String::new();
+        io::stdin().read_line(&mut input)?;
+
+        let value = input.trim().to_string();
+        values.push((param.clone(), value));
+    }
+
+    Ok(values)
+}
+
+/// Replace template parameters with provided values
+fn replace_template_params(command: &str, values: &[(String, String)]) -> String {
+    let mut result = command.to_string();
+
+    for (param, value) in values {
+        let placeholder = format!("{{{}}}", param);
+        result = result.replace(&placeholder, value);
+    }
+
+    result
+}
+
 /// Execute a raw shell command (for testing)
 #[allow(dead_code)]
 pub fn execute_raw(command: &str) -> Result<i32> {
@@ -153,5 +230,61 @@ mod tests {
     fn test_run_shell_command_failure() {
         let exit_code = run_shell_command("exit 42").unwrap();
         assert_eq!(exit_code, 42);
+    }
+
+    #[test]
+    fn test_has_template_params() {
+        assert!(has_template_params("weather {city}"));
+        assert!(has_template_params("echo {name} and {value}"));
+        assert!(!has_template_params("echo hello"));
+        assert!(!has_template_params("echo { incomplete"));
+    }
+
+    #[test]
+    fn test_extract_template_params_single() {
+        let params = extract_template_params("weather {city}");
+        assert_eq!(params, vec!["city"]);
+    }
+
+    #[test]
+    fn test_extract_template_params_multiple() {
+        let params = extract_template_params("curl {url} -d '{data}'");
+        assert_eq!(params, vec!["url", "data"]);
+    }
+
+    #[test]
+    fn test_extract_template_params_duplicate() {
+        let params = extract_template_params("echo {name} and {name}");
+        assert_eq!(params, vec!["name"]);
+    }
+
+    #[test]
+    fn test_extract_template_params_empty() {
+        let params = extract_template_params("echo {} and { }");
+        assert!(params.is_empty());
+    }
+
+    #[test]
+    fn test_replace_template_params_single() {
+        let values = vec![("city".to_string(), "Beijing".to_string())];
+        let result = replace_template_params("weather {city}", &values);
+        assert_eq!(result, "weather Beijing");
+    }
+
+    #[test]
+    fn test_replace_template_params_multiple() {
+        let values = vec![
+            ("url".to_string(), "http://example.com".to_string()),
+            ("data".to_string(), "{\"key\": \"value\"}".to_string()),
+        ];
+        let result = replace_template_params("curl {url} -d '{data}'", &values);
+        assert_eq!(result, "curl http://example.com -d '{\"key\": \"value\"}'");
+    }
+
+    #[test]
+    fn test_replace_template_params_no_match() {
+        let values: Vec<(String, String)> = vec![];
+        let result = replace_template_params("echo hello", &values);
+        assert_eq!(result, "echo hello");
     }
 }
