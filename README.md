@@ -1,8 +1,9 @@
-# voro
+<div style="text-align:center">
+<h1>VORO</h1>
+<p><b>A fast, minimal CLI tool to save, organize, and run your favorite commands instantly.</b></p>
+<img src="banner.png" alt="voro.sh"/>
+</div>
 
-**The Terminal Authority.**
-
-A fast, minimal CLI tool to save, organize, and run your favorite commands instantly.
 
 ## Why voro?
 
