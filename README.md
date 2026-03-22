@@ -257,5 +257,5 @@ Built with:
 ---
 
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/nanbingxyz">nanbingxyz</a>
+  Made with GLM-5 by <a href="https://github.com/nanbingxyz">nanbingxyz</a>
 </p>
